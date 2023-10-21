@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract PropertyRentingTransactionLogger {
+    address public owner;
+
+    enum RentalStatus { Available, Rented }
+
+    struct Property {
+        uint256 propertyId;
+        address owner;
+        string location;
+        uint256 rentalPrice;
+        RentalStatus status;
+    }
+
+    mapping(uint256 => Property) public properties;
+    uint256 public totalProperties;
+
+    event PropertyAdded(uint256 propertyId, string location, uint256 rentalPrice);
+    event RentalCreated(uint256 propertyId);
+    event RentalEnded(uint256 propertyId);
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Only the owner can call this function");
+        _;
+    }
+
+    function addProperty(string memory _location, uint256 _rentalPrice) external onlyOwner {
+        uint256 propertyId = totalProperties;
+        properties[propertyId] = Property(propertyId, msg.sender, _location, _rentalPrice, RentalStatus.Available);
+        totalProperties++;
+
+        emit PropertyAdded(propertyId, _location, _rentalPrice);
+    }
+
+    function createRental(uint256 _propertyId) external onlyOwner {
+        Property storage property = properties[_propertyId];
+        require(property.status == RentalStatus.Available, "Property is not available for rent.");
+
+        property.status = RentalStatus.Rented;
+
+        emit RentalCreated(_propertyId);
+    }
+
+    function endRental(uint256 _propertyId) external onlyOwner {
+        Property storage property = properties[_propertyId];
+        require(property.status == RentalStatus.Rented, "Property is not currently rented.");
+        require(msg.sender == property.owner, "Only the owner can end the rental.");
+
+        property.status = RentalStatus.Available;
+
+        emit RentalEnded(_propertyId);
+    }
+}
